@@ -6,9 +6,30 @@ import path from "path";
 const __dirname = path.resolve();
 
 async function scrapeImages() {
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
-  await page.goto("https://www.pokemon-zone.com/cards/");
+  await page.goto("https://www.pokemon-zone.com/cards/?series=PROMO-A");
+
+  let previousHeight;
+  while (true) {
+    const imgList = await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const nodeList = document.querySelectorAll(".card-grid img");
+          const imgArray = [...nodeList];
+          const imgList = imgArray.map(({ src }) => src);
+          resolve(imgList);
+        }, 2000);
+      });
+    });
+
+    const currentHeight = await page.evaluate("document.body.scrollHeight");
+    if (previousHeight === currentHeight) {
+      break;
+    }
+    previousHeight = currentHeight;
+  }
 
   const imgList = await page.evaluate(() => {
     const nodeList = document.querySelectorAll(".card-grid img");
@@ -52,7 +73,7 @@ async function downloadImages() {
 
 (async () => {
   //Running both functions can take a while, as this is a test I recommend running one at a time
-  await scrapeImages();
+  //await scrapeImages();
 
   //await downloadImages();
 })();
